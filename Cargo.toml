@@ -1,0 +1,10 @@
+[package]
+name = "roc"
+version = "0.2.0"
+authors = ["Pavel Potocek <pavelpotocek@gmail.com>"]
+
+[dependencies]
+num-traits = "*"
+
+[dev-dependencies]
+rand = "*"
