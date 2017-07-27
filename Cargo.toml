@@ -2,9 +2,14 @@
 name = "classifier-measures"
 version = "0.3.0"
 authors = ["Pavel Potocek <pavelpotocek@gmail.com>"]
+license = "MIT"
+description = "Receiver Operating Characteristic (ROC) and Precision-Recall curve (PR) computation"
+repository = "https://github.com/potocpav/classifier-measures"
+homepage = "https://github.com/potocpav/classifier-measures"
+documentation = "https://docs.rs/classifier-measures/"
+keywords = ["ROC", "PR", "AUC", "classifier"]
+categories = ["science"]
+readme = "README.md"
 
 [dependencies]
 num-traits = "0.1"
-
-[dev-dependencies]
-rand = "0.3"
