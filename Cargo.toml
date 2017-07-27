@@ -1,10 +1,10 @@
 [package]
-name = "roc"
-version = "0.2.0"
+name = "classifier-measures"
+version = "0.3.0"
 authors = ["Pavel Potocek <pavelpotocek@gmail.com>"]
 
 [dependencies]
-num-traits = "*"
+num-traits = "0.1"
 
 [dev-dependencies]
-rand = "*"
+rand = "0.3"

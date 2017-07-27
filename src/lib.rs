@@ -1,6 +1,13 @@
  #![feature(sort_unstable)]
+ #![warn(missing_docs)]
 
-// extern crate quickersort;
+ /*!
+Measure classifier's performance using Receiver Operating Characteristic (ROC) and Precision-Recall
+(PR) curves.
+
+The curves themselves can be computed as well as trapezoidal areas under the curves.
+ */
+
 extern crate num_traits;
 use num_traits::{Float, NumCast};
 
@@ -20,18 +27,20 @@ fn trapezoidal<F: Float>(x: &[F], y: &[F]) -> F {
     integral
 }
 
-fn check_roc_auc_inputs<F: Float>(pairs: &[(bool, F)]) -> Result<(), &'static str> {
-    if pairs.len() < 1 {
-        return Err("Input is empty.");
+/// Returns the last element of a vector, if it is non-zero.
+fn get_last_nonzero<F: Float>(v: &[F]) -> Option<F> {
+    if v.len() == 0 {
+        return None;
     }
-
-    if pairs.iter().find(|x| x.0 == true).is_none() || pairs.iter().find(|x| x.0 == false).is_none() {
-        return Err("Both classes must be present.");
+    let m = v[v.len() - 1];
+    if m == F::zero() {
+        None
+    } else {
+        Some(m)
     }
-
-    Ok(())
 }
 
+/// Uses a provided closure to convert free-form data into a standard format
 fn convert<T, X, F, I>(data: I, convert_fn: F) -> Vec<(bool, X)> where
         I: IntoIterator<Item=T>,
         F: Fn(T) -> (bool, X),
@@ -44,12 +53,16 @@ fn convert<T, X, F, I>(data: I, convert_fn: F) -> Vec<(bool, X)> where
     v
 }
 
-// sorts pairs in-place!
-fn roc_unnormalized_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
+/// Computes a ROC curve of a given classifier, sorting `pairs` in-place.
+///
+/// Returns `None` if one of the classes is not present or any values are non-finite.
+/// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
+/// y-coordinates of the ROC curve.
+fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     pairs.sort_unstable_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
-            None      => panic!("A non-finite score is not allowed.")
+            None      => unreachable!(), // TODO
         });
 
     let mut s0 = F::nan();
@@ -69,25 +82,13 @@ fn roc_unnormalized_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Ve
     tps.push(tp);
     fps.push(fp);
 
-    Some((fps, tps))
-}
-
-pub fn roc<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
-        I: IntoIterator<Item=T>,
-        F: Fn(T) -> (bool, X),
-        X: Float {
-    roc_mut(&mut convert(data, convert_fn))
-}
-
-pub fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
-    if let Some((mut fps, mut tps)) = roc_unnormalized_mut(pairs) {
-        let (tp_inv, fp_inv) = (F::one() / tps[tps.len() - 1], F::one() / fps[fps.len() - 1]);
-        for mut x in tps.iter_mut() {
-            *x = *x * tp_inv;
+    // normalize
+    if let (Some(tp_max), Some(fp_max)) = (get_last_nonzero(&tps), get_last_nonzero(&fps)) {
+        for mut tp in &mut tps {
+            *tp = *tp / tp_max;
         }
-
-        for mut y in fps.iter_mut() {
-            *y = *y * fp_inv;
+        for mut fp in &mut fps {
+            *fp = *fp / fp_max;
         }
         Some((fps, tps))
     } else {
@@ -95,6 +96,29 @@ pub fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     }
 }
 
+/// Computes a ROC curve of a given classifier.
+///
+/// `data` is a free-form `IntoIterator` object and `convert_fn` is a closure that converts each
+/// data-point into a pair `(ground_truth, prediction).`
+///
+/// Returns `None` if one of the classes is not present or any values are non-finite.
+/// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
+/// y-coordinates of the ROC curve.
+pub fn roc<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
+        I: IntoIterator<Item=T>,
+        F: Fn(T) -> (bool, X),
+        X: Float {
+    roc_mut(&mut convert(data, convert_fn))
+}
+
+/// Computes a PR curve of a given classifier.
+///
+/// `data` is a free-form `IntoIterator` object and `convert_fn` is a closure that converts each
+/// data-point into a pair `(ground_truth, prediction).`
+///
+/// Returns `None` if one of the classes is not present or any values are non-finite.
+/// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
+/// y-coordinates of the PR curve.
 pub fn pr<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
         I: IntoIterator<Item=T>,
         F: Fn(T) -> (bool, X),
@@ -102,16 +126,20 @@ pub fn pr<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
     pr_mut(&mut convert(data, convert_fn))
 }
 
-// sorts pairs in-place!
+/// Computes a PR curve of a given classifier, sorting `pairs` in-place.
+///
+/// Returns `None` if one of the classes is not present or any values are non-finite.
+/// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
+/// y-coordinates of the PR curve.
 pub fn pr_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     pairs.sort_unstable_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
-            None      => unreachable!()
+            None      => unreachable!(), // TODO
         });
 
     let mut x0 = F::nan();
-    let (mut tp, mut p) = (F::zero(), F::zero());
+    let (mut tp, mut p, mut fp) = (F::zero(), F::zero(), F::zero());
     let (mut recall, mut precision) = (vec![], vec![]);
 
     // number of labels
@@ -124,11 +152,12 @@ pub fn pr_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     for &(l, x) in pairs.iter() {
         if x != x0 {
             recall.push(tp / ln);
-            precision.push(if p == F::zero() { F::one() } else { tp / p });
+            precision.push(if p == F::zero() { F::one() } else { tp / (tp + fp) });
             x0 = x;
         }
         p = p + F::one();
         if l { tp = tp + F::one(); }
+        else { fp = fp + F::one(); }
     }
     recall.push(tp / ln);
     precision.push(tp / p);
@@ -136,6 +165,13 @@ pub fn pr_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     Some((precision, recall))
 }
 
+/// Computes the area under a PR curve of a given classifier.
+///
+/// `data` is a free-form `IntoIterator` object and `convert_fn` is a closure that converts each
+/// data-point into a pair `(ground_truth, prediction).`
+///
+/// Returns `None` if one of the classes is not present or any values are non-finite.
+/// Otherwise, returns `Some(area_under_curve)`.
 pub fn pr_auc<T, X, F, I>(data: I, convert_fn: F) -> Option<X> where
         I: IntoIterator<Item=T>,
         F: Fn(T) -> (bool, X),
@@ -143,12 +179,23 @@ pub fn pr_auc<T, X, F, I>(data: I, convert_fn: F) -> Option<X> where
     pr_auc_mut(&mut convert(data, convert_fn))
 }
 
+/// Computes the area under a PR curve of a given classifier, sorting `pairs` in-place.
+///
+/// Returns `None` if one of the classes is not present or any values are non-finite.
+/// Otherwise, returns `Some(area_under_curve)`.
 pub fn pr_auc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<F> {
     pr_mut(pairs).map(|curve| {
         trapezoidal(&curve.1, &curve.0)
     })
 }
 
+/// Computes the area under a ROC curve of a given classifier.
+///
+/// `data` is a free-form `IntoIterator` object and `convert_fn` is a closure that converts each
+/// data-point into a pair `(ground_truth, prediction).`
+///
+/// Returns `None` if one of the classes is not present or any values are non-finite.
+/// Otherwise, returns `Some(area_under_curve)`.
 pub fn roc_auc<T, X, F, I>(data: I, convert_fn: F) -> Option<X> where
         I: IntoIterator<Item=T>,
         F: Fn(T) -> (bool, X),
@@ -156,12 +203,10 @@ pub fn roc_auc<T, X, F, I>(data: I, convert_fn: F) -> Option<X> where
     roc_auc_mut(&mut convert(data, convert_fn))
 }
 
+/// Computes the area under a ROC curve of a given classifier, sorting `pairs` in-place.
+///
+/// Returns `None` if one of the classes is not present or any values are non-finite.
+/// Otherwise, returns `Some(area_under_curve)`.
 pub fn roc_auc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<F> {
-    // check the input
-    if let Err(_) = check_roc_auc_inputs(pairs) {
-        return None;
-    }
-    roc_unnormalized_mut(pairs).map(|curve| {
-        trapezoidal(&curve.0, &curve.1) / curve.0[curve.0.len()-1] / curve.1[curve.1.len()-1]
-    })
+    roc_mut(pairs).map(|curve| trapezoidal(&curve.0, &curve.1))
 }
