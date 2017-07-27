@@ -28,17 +28,9 @@ fn trapezoidal<F: Float>(x: &[F], y: &[F]) -> F {
     integral
 }
 
-/// Returns the last element of a vector, if it is non-zero.
-fn get_last_nonzero<F: Float>(v: &[F]) -> Option<F> {
-    if v.len() == 0 {
-        return None;
-    }
-    let m = v[v.len() - 1];
-    if m == F::zero() {
-        None
-    } else {
-        Some(m)
-    }
+/// Checks if all data-points are finite
+fn check_data<F: Float>(v: &[(bool, F)]) -> bool {
+    v.iter().any(|x| x.0) && v.iter().any(|x| !x.0) && v.iter().all(|x| x.1.is_finite())
 }
 
 /// Uses a provided closure to convert free-form data into a standard format
@@ -60,10 +52,13 @@ fn convert<T, X, F, I>(data: I, convert_fn: F) -> Vec<(bool, X)> where
 /// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
 /// y-coordinates of the ROC curve.
 pub fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
+    if !check_data(pairs) {
+        return None;
+    }
     pairs.sort_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
-            None      => unreachable!(), // TODO
+            None      => unreachable!(),
         });
 
     let mut s0 = F::nan();
@@ -84,17 +79,14 @@ pub fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     fps.push(fp);
 
     // normalize
-    if let (Some(tp_max), Some(fp_max)) = (get_last_nonzero(&tps), get_last_nonzero(&fps)) {
-        for mut tp in &mut tps {
-            *tp = *tp / tp_max;
-        }
-        for mut fp in &mut fps {
-            *fp = *fp / fp_max;
-        }
-        Some((fps, tps))
-    } else {
-        None
+    let (tp_max, fp_max) = (tps[tps.len() - 1], fps[fps.len() - 1]);
+    for mut tp in &mut tps {
+        *tp = *tp / tp_max;
     }
+    for mut fp in &mut fps {
+        *fp = *fp / fp_max;
+    }
+    Some((fps, tps))
 }
 
 /// Computes a ROC curve of a given classifier.
@@ -133,10 +125,13 @@ pub fn pr<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
 /// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
 /// y-coordinates of the PR curve.
 pub fn pr_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
+    if !check_data(pairs) {
+        return None;
+    }
     pairs.sort_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
-            None      => unreachable!(), // TODO
+            None      => unreachable!(),
         });
 
     let mut x0 = F::nan();
@@ -144,11 +139,7 @@ pub fn pr_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     let (mut recall, mut precision) = (vec![], vec![]);
 
     // number of labels
-    let ln = pairs.iter().fold(0, |a,b| a + if b.0 { 1 } else { 0 });
-    let ln = NumCast::from(ln).unwrap();
-    if ln == F::zero() {
-        return None; // There is no positive sample
-    }
+    let ln = pairs.iter().fold(F::zero(), |a,b| a + if b.0 { F::one() } else { F::zero() });
 
     for &(l, x) in pairs.iter() {
         if x != x0 {
