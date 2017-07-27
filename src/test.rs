@@ -12,7 +12,7 @@ fn roc_auc_test_corner_cases() {
         (vec![true, true], vec![1.0, 2.0], None),
         (vec![true, false], vec![1.0, ::std::f64::NAN], None),
         (vec![true, false], vec![1.0, ::std::f64::INFINITY], None),
-        
+
         (vec![false, true, false], vec![1.0, 2.0, 2.0], Some(0.75)),
         (vec![false, false, true], vec![1.0, 2.0, 2.0], Some(0.75)),
         (vec![false, false, true, true], vec![1.0, 2.0, 2.0, 3.0], Some(0.875)),
@@ -23,6 +23,7 @@ fn roc_auc_test_corner_cases() {
     for test in tests {
         println!("test: {:?}", test);
         let mut tests_zipped: Vec<_> = test.0.iter().cloned().zip(test.1.iter().cloned()).collect();
+        assert_eq!(roc_auc(&tests_zipped, |&x| x), test.2);
         assert_eq!(roc_auc_mut(&mut tests_zipped), test.2);
     }
 }
@@ -48,6 +49,7 @@ fn pr_auc_test_corner_cases() {
     for test in tests {
         println!("test: {:?}", test);
         let mut tests_zipped: Vec<_> = test.0.iter().cloned().zip(test.1.iter().cloned()).collect();
+        assert_eq!(pr_auc(&tests_zipped, |&x| x), test.2);
         assert_eq!(pr_auc_mut(&mut tests_zipped), test.2);
     }
 }
