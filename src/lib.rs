@@ -1,4 +1,3 @@
- #![feature(sort_unstable)]
  #![warn(missing_docs)]
 
  /*!
@@ -59,7 +58,7 @@ fn convert<T, X, F, I>(data: I, convert_fn: F) -> Vec<(bool, X)> where
 /// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
 /// y-coordinates of the ROC curve.
 fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
-    pairs.sort_unstable_by(&|x: &(_, F), y: &(_, F)|
+    pairs.sort_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
             None      => unreachable!(), // TODO
@@ -132,7 +131,7 @@ pub fn pr<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
 /// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
 /// y-coordinates of the PR curve.
 pub fn pr_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
-    pairs.sort_unstable_by(&|x: &(_, F), y: &(_, F)|
+    pairs.sort_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
             None      => unreachable!(), // TODO
