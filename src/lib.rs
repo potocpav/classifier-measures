@@ -1,7 +1,9 @@
  #![warn(missing_docs)]
 
  /*!
-Measure classifier's performance using Receiver Operating Characteristic (ROC) and Precision-Recall
+Measure classifier's performance using [Receiver Operating
+Characteristic](https://en.wikipedia.org/wiki/Receiver_operating_characteristic)
+(ROC) and [Precision-Recall](https://en.wikipedia.org/wiki/Precision_and_recall)
 (PR) curves.
 
 The curves themselves can be computed as well as trapezoidal areas under the curves.
