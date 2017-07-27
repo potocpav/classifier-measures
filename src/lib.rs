@@ -52,12 +52,12 @@ fn convert<T, X, F, I>(data: I, convert_fn: F) -> Vec<(bool, X)> where
     v
 }
 
-/// Computes a ROC curve of a given classifier, sorting `pairs` in-place.
+/// Computes a ROC curve of a given classifier sorting `pairs` in-place.
 ///
 /// Returns `None` if one of the classes is not present or any values are non-finite.
 /// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
 /// y-coordinates of the ROC curve.
-fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
+pub fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     pairs.sort_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
@@ -125,7 +125,7 @@ pub fn pr<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
     pr_mut(&mut convert(data, convert_fn))
 }
 
-/// Computes a PR curve of a given classifier, sorting `pairs` in-place.
+/// Computes a PR curve of a given classifier sorting `pairs` in-place.
 ///
 /// Returns `None` if one of the classes is not present or any values are non-finite.
 /// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
@@ -178,7 +178,7 @@ pub fn pr_auc<T, X, F, I>(data: I, convert_fn: F) -> Option<X> where
     pr_auc_mut(&mut convert(data, convert_fn))
 }
 
-/// Computes the area under a PR curve of a given classifier, sorting `pairs` in-place.
+/// Computes the area under a PR curve of a given classifier sorting `pairs` in-place.
 ///
 /// Returns `None` if one of the classes is not present or any values are non-finite.
 /// Otherwise, returns `Some(area_under_curve)`.
@@ -202,7 +202,7 @@ pub fn roc_auc<T, X, F, I>(data: I, convert_fn: F) -> Option<X> where
     roc_auc_mut(&mut convert(data, convert_fn))
 }
 
-/// Computes the area under a ROC curve of a given classifier, sorting `pairs` in-place.
+/// Computes the area under a ROC curve of a given classifier sorting `pairs` in-place.
 ///
 /// Returns `None` if one of the classes is not present or any values are non-finite.
 /// Otherwise, returns `Some(area_under_curve)`.
