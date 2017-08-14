@@ -53,3 +53,21 @@ fn pr_auc_test_corner_cases() {
         assert_eq!(pr_auc_mut(&mut tests_zipped), test.2);
     }
 }
+
+// #[test]
+// fn debug() {
+//     let v = vec![(true, 0), (false, 0)];
+//     assert_eq!(pr_sparse(&v, |x| (x.0, x.1 as f32)), pr(&v, |x| (x.0, x.1 as f32)));
+//     panic!();
+// }
+
+quickcheck! {
+    fn test_pr_auc_sparse(v: Vec<(bool, i32)>) -> bool {
+        pr_auc_sparse(&v, |x| (x.0, x.1 as f32)) == pr_auc(&v, |x| (x.0, x.1 as f32))
+    }
+
+    // This test is disabled, because the curves need not be identical, points can be duplicated differently.
+    // fn test_pr_sparse(v: Vec<(bool, i32)>) -> bool {
+    //     pr_sparse(&v, |x| (x.0, x.1 as f32)) == pr(&v, |x| (x.0, x.1 as f32))
+    // }
+}
