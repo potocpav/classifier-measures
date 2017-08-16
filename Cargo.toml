@@ -12,9 +12,7 @@ categories = ["science"]
 readme = "README.md"
 
 [dev-dependencies]
-quickcheck = "0.3"
 rand = "0.3"
 
 [dependencies]
 num-traits = "0.1"
-search-sorted = { path = "../search-sorted", version = "*" }

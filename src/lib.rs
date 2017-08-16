@@ -9,15 +9,9 @@ Characteristic](https://en.wikipedia.org/wiki/Receiver_operating_characteristic)
 The curves themselves can be computed as well as trapezoidal areas under the curves.
  */
 
-#[cfg(test)]
-#[macro_use]
-extern crate quickcheck;
-
 extern crate num_traits;
-extern crate search_sorted;
 
 use num_traits::{Float, NumCast};
-use search_sorted::search_sorted_by;
 
 mod test;
 
@@ -126,25 +120,7 @@ pub fn pr<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
     pr_mut(&mut convert(data, convert_fn))
 }
 
-/// Computes a PR curve of a given classifier.
-///
-/// `data` is a free-form `IntoIterator` object and `convert_fn` is a closure that converts each
-/// data-point into a pair `(ground_truth, prediction).`
-///
-/// Returns `None` if one of the classes is not present or any values are non-finite.
-/// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
-/// y-coordinates of the PR curve.
-pub fn pr_sparse<T, X, F, I>(data: I, convert_fn: F) -> Option<(Vec<X>, Vec<X>)> where
-        I: IntoIterator<Item=T>,
-        F: Fn(T) -> (bool, X),
-        X: Float {
-    pr_mut_sparse(&mut convert(data, convert_fn))
-}
-
 /// Computes a PR curve of a given classifier sorting `pairs` in-place.
-///
-/// This function returns results identical to `pr_mut`, but it is faster on sparse data
-/// (the amount of data with label==1 is relatively low).
 ///
 /// Returns `None` if one of the classes is not present or any values are non-finite.
 /// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
@@ -182,69 +158,6 @@ pub fn pr_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     Some((precision, recall))
 }
 
-/// Computes a PR curve of a given classifier sorting `pairs` in-place.
-///
-/// This function returns results identical to `pr_mut`, but it is faster on sparse data
-/// (the amount of data with label==1 is relatively low).
-///
-/// Returns `None` if one of the classes is not present or any values are non-finite.
-/// Otherwise, returns `Some((v_x, v_y))` where `v_x` are the x-coordinates and `v_y` are the
-/// y-coordinates of the PR curve.
-pub fn pr_mut_sparse<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
-    if !check_data(pairs) {
-        return None;
-    }
-    let mut positives = pairs.iter().filter(|x| x.0).map(|x| x.1).collect::<Vec<F>>();
-
-    // TODO: Check the sort direction
-    positives.sort_by(&|x: &F, y: &F|
-        match x.partial_cmp(y) {
-            Some(ord) => ord,
-            None      => unreachable!(),
-        });
-
-    // remove duplicates
-    let mut positive_set = Vec::with_capacity(positives.len());
-    positive_set.push(positives[0].clone());
-    for (p, q) in positives.iter().zip(positives.iter().skip(1)) {
-        if p != q {
-            positive_set.push(q.clone());
-        }
-    }
-
-    let mut data: Vec<(F, F)> = vec![(F::zero(), F::zero()); positive_set.len() * 2 + 1];
-    let mut ln = F::zero();
-    for pair in pairs {
-        let i = search_sorted_by(&positive_set, |x| x.partial_cmp(&pair.1).unwrap());
-        let i = 0;
-        if pair.0 {
-            data[i*2+1].1 = data[i*2+1].1 + F::one();
-            ln = ln + F::one();
-        } else {
-            if i < positive_set.len() && positive_set[i] == pair.1 {
-                data[i*2+1].0 = data[i*2+1].0 + F::one();
-            } else {
-                data[i*2].0 = data[i*2].0 + F::one();
-            }
-        }
-    }
-
-    let (mut tp, mut fp) = (F::zero(), F::zero());
-    let (mut recall, mut precision) = (vec![], vec![]);
-
-    for (neg, pos) in data.into_iter().rev() {
-        recall.push(tp / ln);
-        precision.push(if tp + fp == F::zero() { F::one() } else { tp / (tp + fp) });
-        tp = tp + pos;
-        fp = fp + neg;
-    }
-
-    recall.push(tp / ln);
-    precision.push(tp / (tp + fp));
-
-    Some((precision, recall))
-}
-
 /// Computes the area under a PR curve of a given classifier.
 ///
 /// `data` is a free-form `IntoIterator` object and `convert_fn` is a closure that converts each
@@ -259,42 +172,12 @@ pub fn pr_auc<T, X, F, I>(data: I, convert_fn: F) -> Option<X> where
     pr_auc_mut(&mut convert(data, convert_fn))
 }
 
-/// Computes the area under a PR curve of a given classifier.
-///
-/// This function returns results identical to `pr_auc`, but it is faster on sparse data
-/// (the amount of data with label==1 is relatively low).
-///
-/// `data` is a free-form `IntoIterator` object and `convert_fn` is a closure that converts each
-/// data-point into a pair `(ground_truth, prediction).`
-///
-/// Returns `None` if one of the classes is not present or any values are non-finite.
-/// Otherwise, returns `Some(area_under_curve)`.
-pub fn pr_auc_sparse<T, X, F, I>(data: I, convert_fn: F) -> Option<X> where
-        I: IntoIterator<Item=T>,
-        F: Fn(T) -> (bool, X),
-        X: Float {
-    pr_auc_mut_sparse(&mut convert(data, convert_fn))
-}
-
 /// Computes the area under a PR curve of a given classifier sorting `pairs` in-place.
 ///
 /// Returns `None` if one of the classes is not present or any values are non-finite.
 /// Otherwise, returns `Some(area_under_curve)`.
 pub fn pr_auc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<F> {
     pr_mut(pairs).map(|curve| {
-        trapezoidal(&curve.1, &curve.0)
-    })
-}
-
-/// Computes the area under a PR curve of a given classifier sorting `pairs` in-place.
-///
-/// This function returns results identical to `pr_auc_mut`, but it is faster on sparse data
-/// (the amount of data with label==1 is relatively low).
-///
-/// Returns `None` if one of the classes is not present or any values are non-finite.
-/// Otherwise, returns `Some(area_under_curve)`.
-pub fn pr_auc_mut_sparse<F: Float>(pairs: &mut [(bool, F)]) -> Option<F> {
-    pr_mut_sparse(pairs).map(|curve| {
         trapezoidal(&curve.1, &curve.0)
     })
 }

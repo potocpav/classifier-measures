@@ -28,8 +28,3 @@ bench!(pr_mut);
 bench!(pr_auc_mut);
 bench!(roc_mut);
 bench!(roc_auc_mut);
-bench!(pr_auc_mut_sparse);
-bench!(pr_mut_sparse);
-
-bench!(pr_auc_mut_sparse_imba, pr_auc_mut_sparse, 1_000_000, 0.000_03);
-bench!(pr_auc_mut_imba, pr_auc_mut, 1_000_000, 0.000_03);
