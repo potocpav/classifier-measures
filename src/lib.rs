@@ -56,7 +56,7 @@ pub fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     if !check_data(pairs) {
         return None;
     }
-    pairs.sort_by(&|x: &(_, F), y: &(_, F)|
+    pairs.sort_unstable_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
             None      => unreachable!(),
@@ -129,7 +129,7 @@ pub fn pr_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
     if !check_data(pairs) {
         return None;
     }
-    pairs.sort_by(&|x: &(_, F), y: &(_, F)|
+    pairs.sort_unstable_by(&|x: &(_, F), y: &(_, F)|
         match y.1.partial_cmp(&x.1) {
             Some(ord) => ord,
             None      => unreachable!(),
