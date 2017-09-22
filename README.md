@@ -10,4 +10,6 @@ Characteristic](https://en.wikipedia.org/wiki/Receiver_operating_characteristic)
 
 The curves themselves can be computed as well as (trapezoidal) areas under the curves (AUC).
 
+A simple example [is available here](https://github.com/potocpav/classifier-measures/tree/master/examples/example.rs).
+
 [Documentation](https://docs.rs/classifier-measures/)
