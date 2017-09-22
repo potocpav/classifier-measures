@@ -81,10 +81,10 @@ pub fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
 
     // normalize
     let (tp_max, fp_max) = (tps[tps.len() - 1], fps[fps.len() - 1]);
-    for mut tp in &mut tps {
+    for tp in &mut tps {
         *tp = *tp / tp_max;
     }
-    for mut fp in &mut fps {
+    for fp in &mut fps {
         *fp = *fp / fp_max;
     }
     Some((fps, tps))
