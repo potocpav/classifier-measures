@@ -71,9 +71,10 @@ pub fn roc_mut<F: Float>(pairs: &mut [(bool, F)]) -> Option<(Vec<F>, Vec<F>)> {
             fps.push(fp);
             s0 = s;
         }
-        match t {
-            false => fp = fp + F::one(),
-            true =>  tp = tp + F::one(),
+        if t {
+            tp = tp + F::one();
+        } else {
+            fp = fp + F::one();
         }
     }
     tps.push(tp);
